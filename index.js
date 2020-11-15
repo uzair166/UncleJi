@@ -1,5 +1,5 @@
 const Discord = require('discord.js')
-const config = require('./.config.json')
+const config = require('./config.json')
 const axios = require('axios')
 // const isEmpty = requre
 
@@ -23,7 +23,19 @@ const unixTsToDt = unixTs => {
     var sec = a.getSeconds();
     var time = date + '/' + month + '/' + year + ' ' + hour + ':' + min;
     return time;
+}
 
+const round = (num, dp) => {
+    return Math.round(num * Math.pow(10, dp)) / Math.pow(10, dp)
+}
+
+const createUrl = (endpoint, params) => {
+    let baseUrl = 'https://finnhub.io/api/v1/'
+    baseUrl += endpoint + '?token=' + config.FINHUB_KEY
+    Object.entries(params).map(([key, value]) => {
+        baseUrl += '&' + key + '=' + value
+    })
+    return baseUrl
 }
 
 client.on('ready', () => {
@@ -32,7 +44,7 @@ client.on('ready', () => {
 
 const prefix = 'ji'
 
-const baseUrl = 'https://finnhub.io/api/v1/'
+
 
 client.on('message', (message) => {
     // message.reply('yooooooo')
@@ -96,20 +108,23 @@ client.on('message', (message) => {
     if (command === 'p' || command === 'price') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
         const ticker = args.shift().toUpperCase();
-        const url = baseUrl + 'quote?symbol=' + ticker + '&token=' + config.FINHUB_KEY
+        const url = createUrl('quote', { symbol: ticker })
+        console.log(url)
         axios.get(url).then(response => {
             console.log(response.data)
             console.log(stockExists(response.data))
             if (!stockExists(response.data)) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
             const price = response.data.c
-            message.channel.send('The last quote for ' + ticker + ' is **' + price + '**.')
+            let change = Math.round(((Math.abs(response.data.c - response.data.pc)) / response.data.pc) * 10000) / 100
+            if (response.data.c < response.data.pc) change = change * -1
+            message.channel.send('The last quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
         }).catch(err => message.channel.send('Something went wrong: ' + err))
     }
 
     if (command === 'n' || command === 'news') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
         const ticker = args.shift().toUpperCase();
-        const count = args.length === 0 || Number(args[0]) === NaN ? 10 : Number(args[0])
+        const count = args.length === 0 || Number(args[0]) === NaN ? 5 : Number(args[0])
 
         const today = new Date()
         const yesterday = new Date(today)
@@ -117,15 +132,52 @@ client.on('message', (message) => {
         const date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()
         const date2 = yesterday.getFullYear() + '-' + (yesterday.getMonth() + 1) + '-' + yesterday.getDate()
 
-        const url = baseUrl + 'company-news?symbol=' + ticker + '&from=' + date2 + '&to=' + date + '&token=' + config.FINHUB_KEY
-        console.log(url)
+        const url = createUrl('company-news', { symbol: ticker, from: date2, to: date })
         axios.get(url).then(res => {
             if (res.data.length === 0) return message.channel.send('I can\'t find news for ' + ticker)
-            const data = res.data[0]
-            message.channel.send('**' + data.headline + '**')
-            message.channel.send(`(${data.related}) ${data.source} *${unixTsToDt(data.datetime)}*`)
-            message.channel.send('==============')
-            message.channel.send(data.summary)
+            console.log(res.data.length)
+            res.data.slice(0, 5).map(newsItem => {
+                const embed = new Discord.MessageEmbed()
+                    .setColor('#BDA0CB')
+                    .setTitle(newsItem.headline)
+                    .setURL(newsItem.url)
+                    .setAuthor(newsItem.source)
+                    .setTimestamp(new Date(newsItem.datetime * 1000))
+                    .setDescription(newsItem.summary)
+                    .setFooter(newsItem.related)
+                message.channel.send(embed)
+            })
+        })
+    }
+    if (command === 'earnings' || command === 'e') {
+        const today = new Date()
+        const weekLater = new Date(today)
+        weekLater.setDate(today.getDate() + 7)
+        const date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()
+        const date2 = weekLater.getFullYear() + '-' + (weekLater.getMonth() + 1) + '-' + weekLater.getDate()
+        console.log(date2)
+
+        const url = createUrl('calendar/earnings', { from: date, to: date2 })
+        console.log(url + '')
+        let prevDate = ''
+
+        axios.get(url).then(res => {
+            // console.log(res.data.earningsCalendar)
+            let earningsByDay = {}
+            res.data.earningsCalendar.reverse().map(e => earningsByDay[e.date] ? earningsByDay[e.date].push(e) : earningsByDay[e.date] = [e])
+            // console.log(earningsByDay)
+            let embed
+            Object.values(earningsByDay).map(day => {
+                console.log(day)
+                embed = new Discord.MessageEmbed()
+                    .setTitle('Earning for ' + day[0].date)
+                day.map(earning => {
+                    embed.addField(earning.symbol, 'Forecast EPS: __' + round(earning.epsEstimate, 2) + '__', true)
+                })
+                message.channel.send(embed)
+            })
+
+
         })
     }
 })
