@@ -49,9 +49,9 @@ const prefix = 'ji'
 client.on('message', (message) => {
     // message.reply('yooooooo')
 
-    if (message.content.toLowerCase().includes('anime')) {
-        message.guild.member(message.author).kick()
-    }
+    // if (message.content.toLowerCase().includes('anime')) {
+    //     message.guild.member(message.author).kick()
+    // }
 
     if (message.author.bot) return
     if (!message.content.toLowerCase().startsWith(prefix)) return
@@ -60,50 +60,50 @@ client.on('message', (message) => {
     const command = args.shift().toLowerCase();
     console.log('Command: ' + command)
 
-    if (command === 'salaam' || command === 'salam') {
-        // message.reply('WALAIKUMASSALAM JANAAB')
-        message.channel.send('WALAIKUMASSALAM JANAAB')
-    }
+    // if (command === 'salaam' || command === 'salam') {
+    //     // message.reply('WALAIKUMASSALAM JANAAB')
+    //     message.channel.send('WALAIKUMASSALAM JANAAB')
+    // }
 
-    if (command === 'ping') {
-        const timeTaken = Date.now() - message.createdTimestamp
-        message.reply(`UncleJi has a latency of of ${timeTaken}ms.`)
-    }
+    // if (command === 'ping') {
+    //     const timeTaken = Date.now() - message.createdTimestamp
+    //     message.reply(`UncleJi has a latency of of ${timeTaken}ms.`)
+    // }
 
-    if (command === 'team') {
-        if (args.length === 0) {
-            message.channel.send('You have to give me a team name')
-            return
-        }
-        const team = args.join(' ')
-        if (team.toLowerCase() === 'chelsea') {
-            return message.guild
-                .member(message.author)
-                .kick()
-                .then(() =>
-                    message.channel.send(
-                        'Chelsea is a dead team, you have been kicked from the server lol'
-                    )
-                )
-                .catch((err) =>
-                    message.channel.send(
-                        "Chelsea is a dead team but uncle ji hasn't eaten his biryani yet so you can stay"
-                    )
-                )
-        }
-        message.channel.send(team + ' is a good team')
-    }
+    // if (command === 'team') {
+    //     if (args.length === 0) {
+    //         message.channel.send('You have to give me a team name')
+    //         return
+    //     }
+    //     const team = args.join(' ')
+    //     if (team.toLowerCase() === 'chelsea') {
+    //         return message.guild
+    //             .member(message.author)
+    //             .kick()
+    //             .then(() =>
+    //                 message.channel.send(
+    //                     'Chelsea is a dead team, you have been kicked from the server lol'
+    //                 )
+    //             )
+    //             .catch((err) =>
+    //                 message.channel.send(
+    //                     "Chelsea is a dead team but uncle ji hasn't eaten his biryani yet so you can stay"
+    //                 )
+    //             )
+    //     }
+    //     message.channel.send(team + ' is a good team')
+    // }
 
-    if (command === 'donttestme') {
-        console.log(message)
-        const user = message.mentions.users.first()
-        if (!user) return message.channel.send('blah')
-        const member = message.guild.member(user)
-        if (!member) return message.channel.send('blah1')
-        member.kick().then(() => {
-            message.channel.send('dont test uncleji ' + user.tag + ' was kicked')
-        }).catch(err => 'my bad g, ur too hench for me to remove you')
-    }
+    // if (command === 'donttestme') {
+    //     console.log(message)
+    //     const user = message.mentions.users.first()
+    //     if (!user) return message.channel.send('blah')
+    //     const member = message.guild.member(user)
+    //     if (!member) return message.channel.send('blah1')
+    //     member.kick().then(() => {
+    //         message.channel.send('dont test uncleji ' + user.tag + ' was kicked')
+    //     }).catch(err => 'my bad g, ur too hench for me to remove you')
+    // }
 
     if (command === 'p' || command === 'price') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
