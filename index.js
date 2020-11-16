@@ -5,6 +5,14 @@ const axios = require('axios')
 
 const client = new Discord.Client()
 
+let keyCounter = 0
+
+const getFinnhubKey = () => {
+    if (keyCounter === config.FINHUB_KEYS.length) keyCounter = 0
+    console.log('Using api key ' + keyCounter)
+    return config.FINHUB_KEYS[keyCounter++]
+}
+
 const stockExists = quote => {
     let exists = false
     Object.values(quote).map(a => {
@@ -31,7 +39,7 @@ const round = (num, dp) => {
 
 const createUrl = (endpoint, params) => {
     let baseUrl = 'https://finnhub.io/api/v1/'
-    baseUrl += endpoint + '?token=' + config.FINHUB_KEY
+    baseUrl += endpoint + '?token=' + getFinnhubKey()
     Object.entries(params).map(([key, value]) => {
         baseUrl += '&' + key + '=' + value
     })
@@ -183,3 +191,4 @@ client.on('message', (message) => {
 })
 
 client.login(config.BOT_TOKEN)
+// client.login(config.TEST_BOT_TOEKN)
