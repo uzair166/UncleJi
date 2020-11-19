@@ -66,10 +66,8 @@ client.on('ready', () => {
                     if (!minId) return minId = res.data[0].id
                     if (minId === res.data[0].id) return
                     const news = res.data
-
-                    let i = 0
-                    while (news[i].id !== minId) {
-                        const newsItem = news[i++]
+                    minId = news[0].id
+                    news.map(newsItem => {
                         const embed = new Discord.MessageEmbed()
                             .setColor('#BDA0CB')
                             .setTitle(newsItem.headline)
@@ -79,7 +77,7 @@ client.on('ready', () => {
                             .setDescription(newsItem.summary)
                             .setFooter(newsItem.related.length !== 0 ? '(' + newsItem.related.join(', ') + ')' : '')
                         channel.send(embed)
-                    }
+                    })
                 }).catch(err => console.log(err))
             } catch (e) {
                 console.log(error)
