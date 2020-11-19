@@ -1,6 +1,7 @@
 const Discord = require('discord.js')
 const config = require('./config.json')
 const axios = require('axios')
+const cheerio = require('cheerio');
 // const isEmpty = requre
 
 const client = new Discord.Client()
@@ -57,9 +58,9 @@ const prefix = 'ji'
 client.on('message', (message) => {
     // message.reply('yooooooo')
 
-    // if (message.content.toLowerCase().includes('anime')) {
-    //     message.guild.member(message.author).kick()
-    // }
+    if (message.content.toLowerCase().includes('anime')) {
+        message.guild.member(message.author).kick()
+    }
 
     if (message.author.bot) return
     if (!message.content.toLowerCase().startsWith(prefix)) return
@@ -68,50 +69,17 @@ client.on('message', (message) => {
     const command = args.shift().toLowerCase();
     console.log('Command: ' + command)
 
-    // if (command === 'salaam' || command === 'salam') {
-    //     // message.reply('WALAIKUMASSALAM JANAAB')
-    //     message.channel.send('WALAIKUMASSALAM JANAAB')
-    // }
 
-    // if (command === 'ping') {
-    //     const timeTaken = Date.now() - message.createdTimestamp
-    //     message.reply(`UncleJi has a latency of of ${timeTaken}ms.`)
-    // }
-
-    // if (command === 'team') {
-    //     if (args.length === 0) {
-    //         message.channel.send('You have to give me a team name')
-    //         return
-    //     }
-    //     const team = args.join(' ')
-    //     if (team.toLowerCase() === 'chelsea') {
-    //         return message.guild
-    //             .member(message.author)
-    //             .kick()
-    //             .then(() =>
-    //                 message.channel.send(
-    //                     'Chelsea is a dead team, you have been kicked from the server lol'
-    //                 )
-    //             )
-    //             .catch((err) =>
-    //                 message.channel.send(
-    //                     "Chelsea is a dead team but uncle ji hasn't eaten his biryani yet so you can stay"
-    //                 )
-    //             )
-    //     }
-    //     message.channel.send(team + ' is a good team')
-    // }
-
-    // if (command === 'donttestme') {
-    //     console.log(message)
-    //     const user = message.mentions.users.first()
-    //     if (!user) return message.channel.send('blah')
-    //     const member = message.guild.member(user)
-    //     if (!member) return message.channel.send('blah1')
-    //     member.kick().then(() => {
-    //         message.channel.send('dont test uncleji ' + user.tag + ' was kicked')
-    //     }).catch(err => 'my bad g, ur too hench for me to remove you')
-    // }
+    if (command === 'help') {
+        const embed = new Discord.MessageEmbed()
+            .setTitle('UncleJi Command List')
+            .setDescription('All commands need to begin with the prefix \'ji\'.\n<something>    -->    replace with a value\n<something?>    -->    optional')
+            .addField('price <ticker> | p <ticker>', 'Real time price for US stocks.\n> ji price AAPL\n> ji p aapl')
+            .addField('afterhours <ticker> | ah <ticker>', 'After hours price for US stocks. Shows the percentage change since price at close. Can be used when market is open and will give current price but is slower than price command.\n> ji afterhours AAPL\n> ji ah aapl')
+            .addField('news <ticker> <count?> | n <ticker> <count?>', 'List latest company news by symbol from the past 24 hours. Lists 5 values by default. Only available for north ameircan companies.\n> ji news AAPL\n> ji n aapl 3\n')
+            .addField('earnigns <period?> | e <period?>', 'Get earnings release info for the specified period. If no period specified will give the earning releasing **today**. Period can be \'**today**\', \'**tomorrow**\', \'**week**\' or two dates in the format \'**YYYY-MM-DD**\'.\n> ji earnings\n> ji earnings tomorrow\n> ji e week\n> ji e 2021/01/15 2021/01/18\n')
+        message.channel.send(embed)
+    }
 
     if (command === 'p' || command === 'price') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
@@ -125,18 +93,18 @@ client.on('message', (message) => {
             const price = response.data.c
             let change = Math.round(((Math.abs(response.data.c - response.data.pc)) / response.data.pc) * 10000) / 100
             if (response.data.c < response.data.pc) change = change * -1
-            message.channel.send('The last quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
+            message.channel.send('The latest quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
         }).catch(err => message.channel.send('Something went wrong: ' + err))
     }
 
     if (command === 'n' || command === 'news') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
         const ticker = args.shift().toUpperCase();
-        const count = args.length === 0 || Number(args[0]) === NaN ? 5 : Number(args[0])
+        const count = args.length === 0 || isNaN(args[0]) ? 5 : Number(args[0])
 
         const today = new Date()
         const yesterday = new Date(today)
-        yesterday.setDate(yesterday.getDate() - 1)
+        yesterday.setDate(yesterday.getDate() - 6)
         const date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()
         const date2 = yesterday.getFullYear() + '-' + (yesterday.getMonth() + 1) + '-' + yesterday.getDate()
 
@@ -144,7 +112,7 @@ client.on('message', (message) => {
         axios.get(url).then(res => {
             if (res.data.length === 0) return message.channel.send('I can\'t find news for ' + ticker)
             console.log(res.data.length)
-            res.data.slice(0, 5).map(newsItem => {
+            res.data.slice(0, count).map(newsItem => {
                 const embed = new Discord.MessageEmbed()
                     .setColor('#BDA0CB')
                     .setTitle(newsItem.headline)
@@ -158,11 +126,25 @@ client.on('message', (message) => {
         })
     }
     if (command === 'earnings' || command === 'e') {
-        const today = new Date()
-        const weekLater = new Date(today)
-        weekLater.setDate(today.getDate() + 7)
-        const date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()
-        const date2 = weekLater.getFullYear() + '-' + (weekLater.getMonth() + 1) + '-' + weekLater.getDate()
+        let d1 = new Date()
+        let d2 = new Date(d1)
+        let custom = false
+        // weekLater.setDate(d1.getDate() + 7)
+        if (args.length !== 0) {
+            const period = args.shift().toLowerCase()
+            if (period === 'tomorrow') {
+                d1.setDate(d1.getDate() + 1)
+                d2 = d1
+            } else if (period === 'week') {
+                d2.setDate(d1.getDate() + 6)
+            } else if (args.length !== 0) {
+                custom = true
+                d1 = period
+                d2 = args.shift().toLowerCase()
+            }
+        }
+        const date = custom ? d1 : d1.getFullYear() + '-' + (d1.getMonth() + 1) + '-' + d1.getDate()
+        const date2 = custom ? d2 : d2.getFullYear() + '-' + (d2.getMonth() + 1) + '-' + d2.getDate()
         console.log(date2)
 
         const url = createUrl('calendar/earnings', { from: date, to: date2 })
@@ -172,20 +154,38 @@ client.on('message', (message) => {
         axios.get(url).then(res => {
             // console.log(res.data.earningsCalendar)
             let earningsByDay = {}
+            if (!res.data.earningsCalendar || res.data.earningsCalendar) message.channel.send('I can\'t find any earnings for that period')
             res.data.earningsCalendar.reverse().map(e => earningsByDay[e.date] ? earningsByDay[e.date].push(e) : earningsByDay[e.date] = [e])
-            // console.log(earningsByDay)
             let embed
             Object.values(earningsByDay).map(day => {
                 console.log(day)
                 embed = new Discord.MessageEmbed()
                     .setTitle('Earning for ' + day[0].date)
-                day.map(earning => {
-                    embed.addField(earning.symbol, 'Forecast EPS: __' + round(earning.epsEstimate, 2) + '__', true)
-                })
+                embed.addField('Company', day.reduce((agg, val) => agg += val.symbol + '\n', ''), true)
+                embed.addField('Forecast EPS', day.reduce((agg, val) => agg += round(val.epsEstimate, 2) + '\n', ''), true)
+                embed.addField('Reporting', day.reduce((agg, val) => agg += (val.hour === 'bmo' ? 'Before bell' : 'After Bell') + '\n', ''), true)
                 message.channel.send(embed)
             })
 
 
+        })
+    }
+
+    if (command === 'afterhours' || command === 'ah') {
+        if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
+        const ticker = args.shift().toLowerCase();
+        axios.get('https://www.marketwatch.com/investing/stock/' + ticker).then(res => {
+            if (res.data.includes('Symbol Lookup')) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
+            const $ = cheerio.load(res.data);
+            const price = $('h3.intraday__price > bg-quote').text().trim()
+            const closePrice = $('div.intraday__close > table > tbody tr > td').first().text().trim().substring(1)
+            if (isNaN(price) || isNaN(closePrice)) return message.channel.send('Something went wrong.')
+            let change = Math.round(((Math.abs(price - closePrice)) / closePrice) * 10000) / 100
+
+            if (price < closePrice) change = change * -1
+            message.channel.send('The latest quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
+            // console.log('closeprice:', closePrice, price)
+            // message.channel.send('The last quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
         })
     }
 })
