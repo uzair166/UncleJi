@@ -49,6 +49,45 @@ const createUrl = (endpoint, params) => {
 
 client.on('ready', () => {
     console.log('UncleJi is awake!')
+    const channel = client.channels.cache.find(i => i.name === 'stocks')
+    if (channel) {
+        channel.send('getting news')
+        let minId
+        setInterval(() => {
+            try {
+                let url
+                if (!minId) url = createUrl('news', { category: 'general' })
+                else url = createUrl('news', { category: 'general', minId: minId })
+                console.log('url: ', url)
+
+                axios.get(url).then(res => {
+                    console.log('got this much news: ', res.data.length)
+                    if (res.data.length === 0) return
+                    if (!minId) return minId = res.data[0].id
+                    if (minId === res.data[0].id) return
+                    const news = res.data
+
+                    let i = 0
+                    while (news[i].id !== minId) {
+                        const newsItem = news[i++]
+                        const embed = new Discord.MessageEmbed()
+                            .setColor('#BDA0CB')
+                            .setTitle(newsItem.headline)
+                            .setURL(newsItem.url)
+                            .setAuthor(newsItem.source)
+                            .setTimestamp(new Date(newsItem.datetime * 1000))
+                            .setDescription(newsItem.summary)
+                            .setFooter(newsItem.related.length !== 0 ? '(' + newsItem.related.join(', ') + ')' : '')
+                        channel.send(embed)
+                    }
+                }).catch(err => console.log(err))
+            } catch (e) {
+                console.log(error)
+            }
+        }, 600000)
+        // }, 10000)
+
+    }
 })
 
 const prefix = 'ji'
