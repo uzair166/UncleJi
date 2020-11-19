@@ -49,7 +49,7 @@ const createUrl = (endpoint, params) => {
 
 client.on('ready', () => {
     console.log('UncleJi is awake!')
-    const channel = client.channels.cache.find(i => i.name === 'stocks')
+    const channel = client.channels.cache.find(i => i.name === 'news-room')
     if (channel) {
         channel.send('getting news')
         let minId
