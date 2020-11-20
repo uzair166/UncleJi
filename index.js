@@ -132,6 +132,10 @@ client.on('message', (message) => {
         message.channel.send(embed)
     }
 
+    if (command === 'shit') {
+        message.channel.send('https://www.youtube.com/watch?v=6ynqDVGcnXw')
+    }
+
     if (command === 'p' || command === 'price') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
         const ticker = args.shift().toUpperCase();
@@ -267,7 +271,7 @@ client.on('message', (message) => {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the profile for.')
         const ticker = args.shift().toUpperCase()
         const url = args.length === 0
-            ? createUrl('scan/support-resistance', { symbol: ticker })
+            ? createUrl('scan/support-resistance', { symbol: ticker, resolution: '240' })
             : createUrl('scan/support-resistance', { symbol: ticker, resolution: args.shift().toUpperCase() })
         axios.get(url).then(({ data }) => {
             console.log(data)
