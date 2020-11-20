@@ -47,11 +47,15 @@ const createUrl = (endpoint, params) => {
     return baseUrl
 }
 
+function numberWithCommas(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 client.on('ready', () => {
     console.log('UncleJi is awake!')
     const channel = client.channels.cache.find(i => i.name === 'news-room')
     if (channel) {
-        channel.send('getting news')
+        // channel.send('getting news')
         let minId
         setInterval(() => {
             try {
@@ -115,6 +119,16 @@ client.on('message', (message) => {
             .addField('afterhours <ticker> | ah <ticker>', 'After hours price for US stocks. Shows the percentage change since price at close. Can be used when market is open and will give current price but is slower than price command.\n> ji afterhours AAPL\n> ji ah aapl')
             .addField('news <ticker> <count?> | n <ticker> <count?>', 'List latest company news by symbol from the past 24 hours. Lists 5 values by default. Only available for north ameircan companies.\n> ji news AAPL\n> ji n aapl 3\n')
             .addField('earnigns <period?> | e <period?>', 'Get earnings release info for the specified period. If no period specified will give the earning releasing **today**. Period can be \'**today**\', \'**tomorrow**\', \'**week**\' or two dates in the format \'**YYYY-MM-DD**\'.\n> ji earnings\n> ji earnings tomorrow\n> ji e week\n> ji e 2021/01/15 2021/01/18\n')
+            .addField('**profile <ticker> | pr <ticker>**',
+                `Get the general information of a company by providing their ticker.
+                > ji pr aapl`
+            )
+            .addField('**supportresistance <ticker> <timeresolutions?> | sr <ticker> <timeresolutions?>**',
+                `Get the support resistance level for a symol and a time resolution, if no time reolution is provided **D** (daily) will be used. 
+                Supported resolutions are **1**, **5**, **15**, **30**, **60**, **D**, **W**, **M**
+                > ji supportresistance aapl
+                > ji sr aapl 60`
+            )
         message.channel.send(embed)
     }
 
@@ -214,8 +228,8 @@ client.on('message', (message) => {
         axios.get('https://www.marketwatch.com/investing/stock/' + ticker).then(res => {
             if (res.data.includes('Symbol Lookup')) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
             const $ = cheerio.load(res.data);
-            const price = $('h3.intraday__price > bg-quote').text().trim()
-            const closePrice = $('div.intraday__close > table > tbody tr > td').first().text().trim().substring(1)
+            const price = $('h3.intraday__price > bg-quote').text().trim().split(',').join('')
+            const closePrice = $('div.intraday__close > table > tbody tr > td').first().text().trim().substring(1).split(',').join('')
             if (isNaN(price) || isNaN(closePrice)) return message.channel.send('Something went wrong.')
             let change = Math.round(((Math.abs(price - closePrice)) / closePrice) * 10000) / 100
 
@@ -223,6 +237,48 @@ client.on('message', (message) => {
             message.channel.send('The latest quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
             // console.log('closeprice:', closePrice, price)
             // message.channel.send('The last quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
+        })
+    }
+
+    if (command === 'profile' || command === 'pr') {
+        if (args.length === 0) return message.channel.send('You need to provide a stock you want the profile for.')
+        const ticker = args.shift().toUpperCase()
+        const url = createUrl('stock/profile2', { symbol: ticker })
+        axios.get(url).then(({ data }) => {
+            if (Object.keys(data).length === 0) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
+            const embed = new Discord.MessageEmbed()
+                .setAuthor(`${data.exchange} (${data.country})`)
+                .setTitle(data.name)
+                .setURL(data.weburl)
+                .setFooter(data.finnhubIndustry, data.logo)
+                .setDescription(
+                    `Market cap: ${numberWithCommas(data.marketCapitalization)}
+                    Shares outstanding: ${numberWithCommas(data.shareOutstanding)}
+                    IPO date: ${data.ipo}`
+                )
+            message.channel.send(embed)
+        }).catch(err => {
+            console.error('Profile Error:', err)
+            message.channel.send('Something went wrong')
+        })
+    }
+
+    if (command === 'supportresistance' || command === 'sr') {
+        if (args.length === 0) return message.channel.send('You need to provide a stock you want the profile for.')
+        const ticker = args.shift().toUpperCase()
+        const url = args.length === 0
+            ? createUrl('scan/support-resistance', { symbol: ticker })
+            : createUrl('scan/support-resistance', { symbol: ticker, resolution: args.shift().toUpperCase() })
+        axios.get(url).then(({ data }) => {
+            console.log(data)
+            if (Object.keys(data).length === 0) return message.channel.send('I can\'t find a stock with the ticker ' + ticker + ' or the time resolution you provided was invalid.')
+            const embed = new Discord.MessageEmbed()
+                .setTitle('Support and Resistance levels for ' + ticker)
+                .setDescription(data.levels.reduce((str, level) => str += (round(level, 2) + '\n'), ''))
+            message.channel.send(embed)
+        }).catch(err => {
+            console.error('Support Resistance Error:', err)
+            message.channel.send('Something went wrong')
         })
     }
 })
