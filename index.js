@@ -98,7 +98,7 @@ client.on('ready', () => {
             now.getFullYear(),
             now.getMonth(),
             now.getDate(),
-            23, 42, 55 // ...at 00:00:00 hours
+            23, 45, 55 // ...at 00:00:00 hours
         )
         let msToThen = time.getTime() - now.getTime();
         // let i = 5;
