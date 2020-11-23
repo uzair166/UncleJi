@@ -90,6 +90,32 @@ client.on('ready', () => {
         // }, 10000)
 
     }
+
+    const channel2 = client.channels.cache.find(i => i.name === 'general-chat')
+    if (channel2) {
+        let now = new Date()
+        let time = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            23, 42, 55 // ...at 00:00:00 hours
+        )
+        let msToThen = time.getTime() - now.getTime();
+        // let i = 5;
+        setTimeout(() => {
+            channel2.send('MARKET OPENS IN 5').then(sentMessage => {
+                for (let i = 4; i > 0; i--) {
+                    setTimeout(() => { sentMessage.edit('MARKET OPENS IN ' + i + '') }, (5 - i) * 1000)
+                }
+                setTimeout(() => {
+                    sentMessage.delete()
+                    channel2.send("MARKET IS OPEN!")
+                }, 5000)
+            })
+
+        }, msToThen)
+
+    }
 })
 
 const prefix = 'ji'
