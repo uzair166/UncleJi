@@ -232,8 +232,9 @@ client.on('message', (message) => {
         axios.get('https://www.marketwatch.com/investing/stock/' + ticker).then(res => {
             if (res.data.includes('Symbol Lookup')) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
             const $ = cheerio.load(res.data);
-            const price = $('h3.intraday__price > bg-quote').text().trim().split(',').join('')
-            const closePrice = $('div.intraday__close > table > tbody tr > td').first().text().trim().substring(1).split(',').join('')
+            const price = $('h3.intraday__price > .value').text().trim().split(',').join('')
+            const closePrice = $('div.intraday__close > table > tbody tr > td').first().text().trim().split(',').join('').split('$').join('').split('£').join('').split('p').join('').split('c').join('')
+            console.log('price: ' + price + ' closeprice: ' + closePrice)
             if (isNaN(price) || isNaN(closePrice)) return message.channel.send('Something went wrong.')
             let change = Math.round(((Math.abs(price - closePrice)) / closePrice) * 10000) / 100
 
@@ -287,5 +288,5 @@ client.on('message', (message) => {
     }
 })
 
-client.login(config.BOT_TOKEN)
-// client.login(config.TEST_BOT_TOEKN)
+// client.login(config.BOT_TOKEN)
+client.login(config.TEST_BOT_TOEKN)
