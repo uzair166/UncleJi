@@ -53,7 +53,7 @@ function numberWithCommas(x) {
 
 client.on('ready', () => {
     console.log('UncleJi is awake!')
-    const channel = client.channels.cache.find(i => i.name === 'news-room')
+    const channel = client.channels.cache.find(i => i.name === 'news-feed')
     if (channel) {
         // channel.send('getting news')
         let minId
@@ -98,7 +98,7 @@ client.on('ready', () => {
             now.getFullYear(),
             now.getMonth(),
             now.getDate(),
-            23, 45, 55 // ...at 00:00:00 hours
+            14, 29, 55 // ...at 00:00:00 hours
         )
         let msToThen = time.getTime() - now.getTime();
         // let i = 5;
