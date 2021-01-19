@@ -430,5 +430,5 @@ client.on('message', (message) => {
     }
 })
 
-// client.login(config.BOT_TOKEN)
-client.login(config.TEST_BOT_TOEKN)
+client.login(config.BOT_TOKEN)
+// client.login(config.TEST_BOT_TOEKN)
