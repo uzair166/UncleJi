@@ -2,11 +2,15 @@ const Discord = require('discord.js')
 const config = require('./config.json')
 const axios = require('axios')
 const cheerio = require('cheerio');
+const fs = require('fs');
+const { get } = require('http');
 // const isEmpty = requre
 
 const client = new Discord.Client()
 
 let keyCounter = 0
+
+let watchlists
 
 const getFinnhubKey = () => {
     if (keyCounter === config.FINHUB_KEYS.length) keyCounter = 0
@@ -47,12 +51,82 @@ const createUrl = (endpoint, params) => {
     return baseUrl
 }
 
+const saveWatchlist = wl => {
+    try {
+        fs.writeFileSync('watchlists.json', JSON.stringify(wl))
+        return true
+    } catch (err) {
+        return false
+    }
+}
+
+const getPrice = (ticker, message) => {
+    const url = createUrl('quote', { symbol: ticker })
+    console.log(url)
+    axios.get(url).then(response => {
+        console.log(response.data)
+        console.log(stockExists(response.data))
+        if (!stockExists(response.data)) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
+        const price = response.data.c
+        let change = Math.round(((Math.abs(response.data.c - response.data.pc)) / response.data.pc) * 10000) / 100
+        if (response.data.c < response.data.pc) change = change * -1
+        message.channel.send('The latest quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
+    }).catch(err => message.channel.send('[' + ticker + '] Something went wrong: ' + err))
+
+}
+
+const getAhPrice = (ticker, message) => {
+    axios.get('https://www.marketwatch.com/investing/stock/' + ticker).then(res => {
+        if (res.data.includes('Symbol Lookup')) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
+        const $ = cheerio.load(res.data);
+        const price = $('h3.intraday__price > .value').text().trim().split(',').join('')
+        const closePrice = $('div.intraday__close > table > tbody tr > td').first().text().trim().split(',').join('').split('$').join('').split('£').join('').split('p').join('').split('c').join('')
+        console.log('price: ' + price + ' closeprice: ' + closePrice)
+        if (isNaN(price) || isNaN(closePrice)) return message.channel.send('Something went wrong.')
+        let change = Math.round(((Math.abs(price - closePrice)) / closePrice) * 10000) / 100
+
+        if (price < closePrice) change = change * -1
+        return message.channel.send('The latest quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
+        // console.log('closeprice:', closePrice, price)
+        // message.channel.send('The last quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
+    })
+
+}
+
 function numberWithCommas(x) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 client.on('ready', () => {
     console.log('UncleJi is awake!')
+    // Check for watchlists file
+    console.log(client)
+    client.guilds.cache.forEach(server => {
+        console.log(server.name + " id: " + server.id);
+    });
+
+    const servers = client.guilds.cache.map(server => server.id)
+    watchlists = {}
+
+    try {
+        if (fs.existsSync('watchlists.json')) {
+            console.log('file exists')
+            const data = fs.readFileSync('watchlists.json')
+            watchlists = JSON.parse(data)
+        } else {
+            console.log('file does not exist')
+            fs.writeFileSync('watchlists.json', JSON.stringify(watchlists), () => {
+                console.log('file created')
+            })
+        }
+    } catch (err) {
+        console.error(err)
+    }
+
+    console.log('watchlists', watchlists)
+
+
+
     const channel = client.channels.cache.find(i => i.name === 'news-feed')
     if (channel) {
         // channel.send('getting news')
@@ -165,17 +239,13 @@ client.on('message', (message) => {
     if (command === 'p' || command === 'price') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
         const ticker = args.shift().toUpperCase();
-        const url = createUrl('quote', { symbol: ticker })
-        console.log(url)
-        axios.get(url).then(response => {
-            console.log(response.data)
-            console.log(stockExists(response.data))
-            if (!stockExists(response.data)) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
-            const price = response.data.c
-            let change = Math.round(((Math.abs(response.data.c - response.data.pc)) / response.data.pc) * 10000) / 100
-            if (response.data.c < response.data.pc) change = change * -1
-            message.channel.send('The latest quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
-        }).catch(err => message.channel.send('Something went wrong: ' + err))
+        if (ticker === 'WL' || ticker === 'WATCHLIST') {
+            const server = message.guild.id
+            const user = message.author.id
+            watchlists[server][user].map(t => getPrice(t, message))
+        } else {
+            getPrice(ticker, message)
+        }
     }
 
     if (command === 'n' || command === 'news') {
@@ -255,20 +325,14 @@ client.on('message', (message) => {
     if (command === 'afterhours' || command === 'ah') {
         if (args.length === 0) return message.channel.send('You need to provide a stock you want the price of.')
         const ticker = args.shift().toLowerCase();
-        axios.get('https://www.marketwatch.com/investing/stock/' + ticker).then(res => {
-            if (res.data.includes('Symbol Lookup')) return message.channel.send('I can\'t find a stock with the ticker ' + ticker)
-            const $ = cheerio.load(res.data);
-            const price = $('h3.intraday__price > .value').text().trim().split(',').join('')
-            const closePrice = $('div.intraday__close > table > tbody tr > td').first().text().trim().split(',').join('').split('$').join('').split('£').join('').split('p').join('').split('c').join('')
-            console.log('price: ' + price + ' closeprice: ' + closePrice)
-            if (isNaN(price) || isNaN(closePrice)) return message.channel.send('Something went wrong.')
-            let change = Math.round(((Math.abs(price - closePrice)) / closePrice) * 10000) / 100
-
-            if (price < closePrice) change = change * -1
-            message.channel.send('The latest quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
-            // console.log('closeprice:', closePrice, price)
-            // message.channel.send('The last quote for ' + ticker + ' is **' + price + '** (' + change + '%)')
-        })
+        if (ticker === 'wl' || ticker === 'watchlist') {
+            const server = message.guild.id
+            const user = message.author.id
+            watchlists[server][user].map(t => getAhPrice(t, message))
+        } else {
+            console.log('in else')
+            return getAhPrice(ticker, message)
+        }
     }
 
     if (command === 'profile' || command === 'pr') {
@@ -312,7 +376,59 @@ client.on('message', (message) => {
             message.channel.send('Something went wrong')
         })
     }
+
+    if (command === 'watchlist' || command === 'wl') {
+        const server = message.guild.id
+        const user = message.author.id
+        if (args.length === 0) {
+            if (!watchlists[server] || !watchlists[server][user] || watchlists[server][user].length === 0) {
+                message.channel.send('Your watchlist is empty.')
+            }
+            else {
+                message.channel.send(watchlists[server][user].join('\n'))
+            }
+        }
+        else {
+            const command2 = args.shift().toLowerCase()
+            if (command2 === 'a' || command2 === 'add') {
+                if (args.length === 0) return message.channel.send('You need to provide a stock ticker you want to add to your watchlist.')
+                const ticker = args.shift().toUpperCase();
+                if (!watchlists[server]) watchlists[server] = {}
+                if (!watchlists[server][user]) watchlists[server][user] = []
+                if (watchlists[server][user].includes(ticker)) return message.channel.send(ticker + ' is already in your watchlist')
+                if (watchlists[server][user].length === 5) return message.channel.send('You already have 5 stocks in your watchlist, please try removing one first!')
+                watchlists[server][user].push(ticker)
+                if (saveWatchlist(watchlists)) {
+                    return message.channel.send(ticker + " has been added to your watchlist");
+                }
+                else {
+                    watchlists[server][user].pop()
+                    return message.channel.send("There was an error trying to save your watchlist (maybe someone else was trying to save at the same time) please try again.")
+                }
+            }
+            else if (command2 === 'r' || command2 === 'remove') {
+                if (args.length === 0) return message.channel.send('You need to provide a stock ticker you want to remove from your watchlist.')
+                if (!watchlists[server] || !watchlists[server][user] || watchlists[server][user].length === 0) {
+                    return message.channel.send('Your watchlist is empty.')
+                }
+                const ticker = args.shift().toUpperCase();
+                const index = watchlists[server][user].indexOf(ticker)
+                if (index > -1) {
+                    watchlists[server][user].splice(index, 1);
+                    if (saveWatchlist(watchlists)) {
+                        return message.channel.send(ticker + ' has successfully been removed from your watchlist')
+                    } else {
+                        return message.channel.send("There was an error trying to save your watchlist (maybe someone else was trying to save at the same time) please try again.")
+                    }
+                } else {
+                    return message.channel.send(ticker + ' is not in your watchlist')
+                }
+
+
+            }
+        }
+    }
 })
 
-client.login(config.BOT_TOKEN)
-// client.login(config.TEST_BOT_TOEKN)
+// client.login(config.BOT_TOKEN)
+client.login(config.TEST_BOT_TOEKN)
