@@ -396,7 +396,7 @@ client.on('message', (message) => {
                 if (!watchlists[server]) watchlists[server] = {}
                 if (!watchlists[server][user]) watchlists[server][user] = []
                 if (watchlists[server][user].includes(ticker)) return message.channel.send(ticker + ' is already in your watchlist')
-                if (watchlists[server][user].length === 5) return message.channel.send('You already have 5 stocks in your watchlist, please try removing one first!')
+                if (watchlists[server][user].length === 7) return message.channel.send('You already have 7 stocks in your watchlist, please try removing one first!')
                 watchlists[server][user].push(ticker)
                 if (saveWatchlist(watchlists)) {
                     return message.channel.send(ticker + " has been added to your watchlist");
