@@ -1,10 +1,10 @@
 {
-    "TEST_BOT_TOEKN": "Nzc1ODc2NzUzMDYyMzYzMjA3.X6stiQ.ryA1-CU1siSmYKeVAPVBP2xU0oM",
-    "BOT_TOKEN": "Nzc3ODMyMDIyMzI3OTUxNDAx.X7JKhQ.apLzcrocqKR6hFOZrRkPlFTqz3I",
+    "TEST_BOT_TOEKN": "",
+    "BOT_TOKEN": "",
     "FINHUB_KEYS": [
-        "bum03cn48v6r9o8j8bng",
-        "bup4tt748v6sjkjiir8g",
-        "bup4udn48v6sjkjiits0",
-        "bup4un748v6sjkjiiuhg"
+        "",
+        "",
+        "",
+        ""
     ]
 }
